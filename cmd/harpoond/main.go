@@ -3,25 +3,40 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
+	"log"
+	"os"
+	"os/signal"
+
+	"github.com/pbalduino/harpoon/pkg/server"
 )
 
 func main() {
-	socketPtr := flag.String("socket", "/var/run/docker.sock", "Socket location")
-	portPtr := flag.Int("port", 10608, "TCP port for client connection")
-	bindAddressPtr := flag.String("bind", "0.0.0.0", "Bind address for client connection")
+	var (
+		socketPtr      = flag.String("socket", "/var/run/docker.sock", "Socket location")
+		portPtr        = flag.Uint("port", 10608, "TCP port for client connection")
+		bindAddressPtr = flag.String("bind", "0.0.0.0", "Bind address for client connection")
+	)
 
 	flag.Parse()
 
-	err := checkIfUnique()
-	if err != nil {
-		fmt.Println("Server is already running")
-	} else {
-		fmt.Printf("Starting server using socket '%s' at %s:%d\n", *socketPtr, *bindAddressPtr, *portPtr)
-	}
+	serve(*socketPtr, fmt.Sprint(*portPtr), *bindAddressPtr)
 }
 
-func checkIfUnique() (err error) {
-	_, err = net.Listen("tcp", ":10608")
-	return
+func serve(socket string, port string, bindAddress string) {
+	registerInterrupt()
+
+	server.Start(bindAddress, port, socket)
+}
+
+func registerInterrupt() {
+	c := make(chan os.Signal, 1)
+
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		for _ = range c {
+			log.Println("Received SIGINT")
+			server.Stop()
+		}
+	}()
 }
