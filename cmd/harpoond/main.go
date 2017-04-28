@@ -3,16 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/pbalduino/harpoon/pkg/server"
 )
 
 func main() {
 	var (
-		socketPtr      = flag.String("socket", "/var/run/docker.sock", "Socket location")
+		socketPtr      = flag.String("socket", "unix:///var/run/docker.sock", "Socket location")
 		portPtr        = flag.Uint("port", 10608, "TCP port for client connection")
 		bindAddressPtr = flag.String("bind", "0.0.0.0", "Bind address for client connection")
 	)
@@ -29,14 +29,12 @@ func serve(socket string, port string, bindAddress string) {
 }
 
 func registerInterrupt() {
-	c := make(chan os.Signal, 1)
+	c := make(chan os.Signal, 2)
 
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
 
 	go func() {
-		for _ = range c {
-			log.Println("Received SIGINT")
-			server.Stop()
-		}
+		<-c
+		server.Stop()
 	}()
 }
