@@ -3,9 +3,14 @@ package server
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"encoding/json"
 	"log"
 	"net"
 	"time"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 )
 
 var stop bool
@@ -49,6 +54,31 @@ func clientComm(bindAddress string, port string) {
 	}
 }
 
+func dockerComm(socket string) {
+	cli, err := client.NewEnvClient()
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println("Waiting for events")
+
+	eventCh, _ := cli.Events(context.Background(), types.EventsOptions{})
+
+	for event := range eventCh {
+		log.Println(event)
+		log.Println(event.Status)
+		byt := []byte(event.Status)
+
+		var dat map[string]interface{}
+
+		if err := json.Unmarshal(byt, &dat); err != nil {
+			panic(err)
+		}
+
+		// log.Println(dat[])
+	}
+}
+
 func processMessage(msg string) {
 	log.Print("Message:", msg)
 }
@@ -58,6 +88,7 @@ func Start(bindAddress string, port string, socket string) {
 	log.Printf("Starting server using socket '%s' at %s:%s\n", socket, bindAddress, port)
 
 	go clientComm(bindAddress, port)
+	go dockerComm(socket)
 
 	//	dockerd, err := listen(socket)
 
