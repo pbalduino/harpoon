@@ -12,14 +12,35 @@ import (
 
 func main() {
 	var (
-		socketPtr      = flag.String("socket", "unix:///var/run/docker.sock", "Socket location")
-		portPtr        = flag.Uint("port", 10608, "TCP port for client connection")
-		bindAddressPtr = flag.String("bind", "0.0.0.0", "Bind address for client connection")
+		bindAddress, port, socket string
 	)
+
+	flag.StringVar(&socket, "socket", "unix:///var/run/docker.sock", "Socket location")
+	flag.StringVar(&port, "port", "10608", "TCP port for client connection")
+	flag.StringVar(&bindAddress, "bind", "0.0.0.0", "Bind address for client connection")
 
 	flag.Parse()
 
-	serve(*socketPtr, fmt.Sprint(*portPtr), *bindAddressPtr)
+	envVars(&socket, &port, &bindAddress)
+
+	serve(socket, fmt.Sprint(port), bindAddress)
+}
+
+func envVars(socket *string, port *string, bindAddress *string) {
+	hs := os.Getenv("HARPOON_SOCKET")
+	if hs != "" {
+		*socket = hs
+	}
+
+	hp := os.Getenv("HARPOON_PORT")
+	if hp != "" {
+		*port = hp
+	}
+
+	hb := os.Getenv("HARPOON_BIND")
+	if hb != "" {
+		*bindAddress = hb
+	}
 }
 
 func serve(socket string, port string, bindAddress string) {
