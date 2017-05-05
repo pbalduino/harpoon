@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/pbalduino/harpoon/pkg/event"
 )
 
 // Start does
@@ -25,11 +27,10 @@ func Start(socket string) {
 	resp, _ := client.Get("http://docker/events")
 	reader := bufio.NewReader(resp.Body)
 
-	log.Println(".")
 	for {
 		line, _ := reader.ReadBytes('\n')
 
-		log.Println(string(line))
+		go event.Process(line)
 	}
 
 }
